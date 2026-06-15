@@ -37,7 +37,7 @@ type pageData struct {
 	Description  string
 	Gopher       string
 	VisitorCount uint64
-	Domain       string
+	Address      string
 	Uptime       string
 	CurrentTime  string
 	GoVersion    string
@@ -125,7 +125,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		Description:   description,
 		Gopher:        gopherASCII,
 		VisitorCount:  count,
-		Domain:        r.Host,
+		Address:       r.Host,
 		Uptime:        humanizeUptime(now.Sub(startTime)),
 		CurrentTime:   now.UTC().Format("Mon, 02 Jan 2006 15:04:05 MST"),
 		GoVersion:     "Go " + strings.TrimPrefix(runtime.Version(), "go"),
