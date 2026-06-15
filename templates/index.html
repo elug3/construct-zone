@@ -88,6 +88,52 @@
       color: var(--text);
       word-break: break-word;
     }
+    /* Badge that reflects the automatically-detected view mode. */
+    .view-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 1.25rem;
+      padding: 0.35rem 0.85rem;
+      border: 1px solid rgba(91, 192, 235, 0.3);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(91, 192, 235, 0.08);
+    }
+    .view-badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    /* Mobile layout automatically applies on narrow viewports/devices. */
+    @media (max-width: 600px) {
+      body {
+        padding: 1rem;
+        align-items: flex-start;
+      }
+      .card {
+        max-width: 420px;
+        padding: 1.75rem;
+      }
+      h1 {
+        font-size: 1.7rem;
+      }
+      .description {
+        font-size: 0.95rem;
+      }
+      pre.gopher {
+        font-size: 0.55rem;
+      }
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
     footer {
       margin-top: 1.75rem;
       color: var(--muted);
@@ -108,6 +154,7 @@
 </head>
 <body>
   <main class="card">
+    <span class="view-badge" id="view-badge" aria-live="polite">Desktop view</span>
     <span class="tag">Construct-Zone</span>
     <h1>We're Building Something Great</h1>
     <pre class="gopher" aria-label="Go gopher mascot">{{ .Gopher }}</pre>
@@ -196,6 +243,35 @@
 
       tick();
       setInterval(tick, 1000);
+    })();
+  </script>
+
+  <script>
+    (function () {
+      // Automatically detect mobile vs desktop based on the viewport, using the
+      // same 600px breakpoint as the CSS media query, and keep the badge in sync.
+      var badge = document.getElementById("view-badge");
+      var mql = window.matchMedia("(max-width: 600px)");
+
+      function applyViewMode(isMobile) {
+        if (badge) {
+          badge.textContent = isMobile ? "Mobile view" : "Desktop view";
+        }
+        document.body.setAttribute("data-view", isMobile ? "mobile" : "desktop");
+      }
+
+      applyViewMode(mql.matches);
+
+      if (typeof mql.addEventListener === "function") {
+        mql.addEventListener("change", function (e) {
+          applyViewMode(e.matches);
+        });
+      } else if (typeof mql.addListener === "function") {
+        // Fallback for older browsers.
+        mql.addListener(function (e) {
+          applyViewMode(e.matches);
+        });
+      }
     })();
   </script>
 </body>
