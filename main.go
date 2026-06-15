@@ -135,6 +135,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// The page is dynamic (live counters, per-request stats), so never cache it.
+	w.Header().Set("Cache-Control", "no-store")
 	if err := tmpl.Execute(w, data); err != nil {
 		log.Printf("template execution error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
