@@ -272,6 +272,12 @@
           applyViewMode(e.matches);
         });
       }
+
+      // Also react to resize directly so the badge always reflects the current
+      // width, even in environments where the matchMedia change event is flaky.
+      window.addEventListener("resize", function () {
+        applyViewMode(mql.matches);
+      });
     })();
   </script>
 </body>
