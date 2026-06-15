@@ -124,11 +124,11 @@
       </div>
       <div class="stat">
         <span class="label">Uptime</span>
-        <span class="value">{{ .Uptime }}</span>
+        <span class="value" id="uptime-value">{{ .Uptime }}</span>
       </div>
       <div class="stat">
         <span class="label">Server Time (UTC)</span>
-        <span class="value">{{ .CurrentTime }}</span>
+        <span class="value" id="time-value">{{ .CurrentTime }}</span>
       </div>
     </section>
 
@@ -138,5 +138,65 @@
       </a>
     </footer>
   </main>
+
+  <script>
+    (function () {
+      var startUnix = {{ .StartUnix }};
+      var serverNowUnix = {{ .ServerNowUnix }};
+      // Offset (in seconds) between the server clock and this browser's clock,
+      // so the ticking values stay aligned to the server even if the client
+      // clock is skewed.
+      var offset = serverNowUnix - Math.floor(Date.now() / 1000);
+
+      var uptimeEl = document.getElementById("uptime-value");
+      var timeEl = document.getElementById("time-value");
+
+      var weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+      function pad(n) {
+        return n < 10 ? "0" + n : "" + n;
+      }
+
+      function unit(value, name) {
+        return value + " " + name + (value !== 1 ? "s" : "");
+      }
+
+      function humanizeUptime(totalSeconds) {
+        totalSeconds = Math.max(0, Math.floor(totalSeconds));
+        var days = Math.floor(totalSeconds / 86400);
+        totalSeconds -= days * 86400;
+        var hours = Math.floor(totalSeconds / 3600);
+        totalSeconds -= hours * 3600;
+        var minutes = Math.floor(totalSeconds / 60);
+        totalSeconds -= minutes * 60;
+        var seconds = totalSeconds;
+
+        var parts = [];
+        if (days > 0) parts.push(unit(days, "day"));
+        if (hours > 0) parts.push(unit(hours, "hour"));
+        if (minutes > 0) parts.push(unit(minutes, "minute"));
+        parts.push(unit(seconds, "second"));
+        return parts.join(" ");
+      }
+
+      function formatUTC(unixSeconds) {
+        var d = new Date(unixSeconds * 1000);
+        return weekdays[d.getUTCDay()] + ", " + pad(d.getUTCDate()) + " " +
+          months[d.getUTCMonth()] + " " + d.getUTCFullYear() + " " +
+          pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" +
+          pad(d.getUTCSeconds()) + " UTC";
+      }
+
+      function tick() {
+        var serverNow = Math.floor(Date.now() / 1000) + offset;
+        if (uptimeEl) uptimeEl.textContent = humanizeUptime(serverNow - startUnix);
+        if (timeEl) timeEl.textContent = formatUTC(serverNow);
+      }
+
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
 </body>
 </html>

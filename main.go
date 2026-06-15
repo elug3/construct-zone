@@ -42,6 +42,10 @@ type pageData struct {
 	CurrentTime  string
 	GoVersion    string
 	GitHubURL    string
+	// StartUnix and ServerNowUnix let the client tick the uptime/clock every
+	// second while staying aligned to the server's clock.
+	StartUnix     int64
+	ServerNowUnix int64
 }
 
 const defaultGitHubURL = "https://github.com/elug3/construct-zone"
@@ -116,15 +120,18 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	count := atomic.AddUint64(&visitorCount, 1)
 
+	now := time.Now()
 	data := pageData{
-		Description:  description,
-		Gopher:       gopherASCII,
-		VisitorCount: count,
-		Domain:       r.Host,
-		Uptime:       humanizeUptime(time.Since(startTime)),
-		CurrentTime:  time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 MST"),
-		GoVersion:    "Go " + strings.TrimPrefix(runtime.Version(), "go"),
-		GitHubURL:    githubURL(),
+		Description:   description,
+		Gopher:        gopherASCII,
+		VisitorCount:  count,
+		Domain:        r.Host,
+		Uptime:        humanizeUptime(now.Sub(startTime)),
+		CurrentTime:   now.UTC().Format("Mon, 02 Jan 2006 15:04:05 MST"),
+		GoVersion:     "Go " + strings.TrimPrefix(runtime.Version(), "go"),
+		GitHubURL:     githubURL(),
+		StartUnix:     startTime.Unix(),
+		ServerNowUnix: now.Unix(),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
