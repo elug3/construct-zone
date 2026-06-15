@@ -88,15 +88,84 @@
       color: var(--text);
       word-break: break-word;
     }
+    /* Badge that reflects the automatically-detected view mode. */
+    .view-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 1.25rem;
+      padding: 0.35rem 0.85rem;
+      border: 1px solid rgba(91, 192, 235, 0.3);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(91, 192, 235, 0.08);
+    }
+    .view-badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    /* Badge label is swapped purely by the media query, so it always tracks the
+       layout automatically without depending on JavaScript. */
+    .view-badge .view-mode-mobile {
+      display: none;
+    }
+    /* Mobile layout automatically applies on narrow viewports/devices. */
+    @media (max-width: 600px) {
+      .view-badge .view-mode-desktop {
+        display: none;
+      }
+      .view-badge .view-mode-mobile {
+        display: inline;
+      }
+      body {
+        padding: 1rem;
+        align-items: flex-start;
+      }
+      .card {
+        max-width: 420px;
+        padding: 1.75rem;
+      }
+      h1 {
+        font-size: 1.7rem;
+      }
+      .description {
+        font-size: 0.95rem;
+      }
+      pre.gopher {
+        font-size: 0.55rem;
+      }
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
     footer {
       margin-top: 1.75rem;
-      font-size: 0.75rem;
       color: var(--muted);
+      display: flex;
+      justify-content: center;
+    }
+    .github-link {
+      color: var(--muted);
+      display: inline-flex;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .github-link:hover,
+    .github-link:focus-visible {
+      color: var(--accent);
+      transform: translateY(-2px);
     }
   </style>
 </head>
 <body>
   <main class="card">
+    <span class="view-badge"><span class="view-mode-desktop">Desktop view</span><span class="view-mode-mobile">Mobile view</span></span>
     <span class="tag">Construct-Zone</span>
     <h1>We're Building Something Great</h1>
     <pre class="gopher" aria-label="Go gopher mascot">{{ .Gopher }}</pre>
@@ -108,20 +177,91 @@
         <span class="value">{{ .VisitorCount }}</span>
       </div>
       <div class="stat">
-        <span class="label">Domain</span>
-        <span class="value">{{ .Domain }}</span>
+        <span class="label">Address</span>
+        <span class="value">{{ .Address }}</span>
       </div>
       <div class="stat">
         <span class="label">Uptime</span>
-        <span class="value">{{ .Uptime }}</span>
+        <span class="value" id="uptime-value">{{ .Uptime }}</span>
       </div>
       <div class="stat">
         <span class="label">Server Time (UTC)</span>
-        <span class="value">{{ .CurrentTime }}</span>
+        <span class="value" id="time-value">{{ .CurrentTime }}</span>
       </div>
     </section>
 
-    <footer>Powered by {{ .GoVersion }} &middot; html/template</footer>
+    <footer>
+      <a class="github-link" href="{{ .GitHubURL }}" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub" title="View source on GitHub">
+        <svg viewBox="0 0 16 16" width="28" height="28" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.76-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+      </a>
+    </footer>
   </main>
+
+  <script>
+    (function () {
+      var startUnix = {{ .StartUnix }};
+      var serverNowUnix = {{ .ServerNowUnix }};
+      // Offset (in seconds) between the server clock and this browser's clock,
+      // so the ticking values stay aligned to the server even if the client
+      // clock is skewed.
+      var offset = serverNowUnix - Math.floor(Date.now() / 1000);
+
+      var uptimeEl = document.getElementById("uptime-value");
+      var timeEl = document.getElementById("time-value");
+
+      var weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+      function pad(n) {
+        return n < 10 ? "0" + n : "" + n;
+      }
+
+      function humanizeUptime(totalSeconds) {
+        totalSeconds = Math.max(0, Math.floor(totalSeconds));
+        // Months/years use 30- and 365-day approximations to match the server.
+        var YEAR = 365 * 86400;
+        var MONTH = 30 * 86400;
+        var DAY = 86400;
+
+        var years = Math.floor(totalSeconds / YEAR);
+        totalSeconds -= years * YEAR;
+        var months = Math.floor(totalSeconds / MONTH);
+        totalSeconds -= months * MONTH;
+        var days = Math.floor(totalSeconds / DAY);
+        totalSeconds -= days * DAY;
+        var hours = Math.floor(totalSeconds / 3600);
+        totalSeconds -= hours * 3600;
+        var minutes = Math.floor(totalSeconds / 60);
+        totalSeconds -= minutes * 60;
+        var seconds = totalSeconds;
+
+        var parts = [];
+        if (years > 0) parts.push(years + "Y");
+        if (months > 0) parts.push(months + "M");
+        if (days > 0) parts.push(days + "D");
+        if (hours > 0) parts.push(hours + "h");
+        if (minutes > 0) parts.push(minutes + "m");
+        parts.push(seconds + "s");
+        return parts.join(" ");
+      }
+
+      function formatUTC(unixSeconds) {
+        var d = new Date(unixSeconds * 1000);
+        return weekdays[d.getUTCDay()] + ", " + pad(d.getUTCDate()) + " " +
+          months[d.getUTCMonth()] + " " + d.getUTCFullYear() + " " +
+          pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" +
+          pad(d.getUTCSeconds()) + " UTC";
+      }
+
+      function tick() {
+        var serverNow = Math.floor(Date.now() / 1000) + offset;
+        if (uptimeEl) uptimeEl.textContent = humanizeUptime(serverNow - startUnix);
+        if (timeEl) timeEl.textContent = formatUTC(serverNow);
+      }
+
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
 </body>
 </html>
