@@ -16,5 +16,6 @@ A tiny Go web server that renders an "under construction" placeholder page using
 - The page is served with `Cache-Control: no-store` because it is dynamic (live counters, per-request stats); browser hard-reloads aren't needed to see template changes after a server restart.
 - The "Address" shown on the page is taken from the request `Host` header, so it reflects whatever host you hit (e.g. `localhost:8080`).
 - View mode (Desktop/Mobile badge + layout) is automatic and driven entirely by the CSS `@media (max-width: 600px)` query — there is no JS toggle. The "Uptime" and "Server Time (UTC)" values tick every second via a small client-side script.
+- "Uptime" is the OS/system uptime read from `/proc/uptime` (Linux), not the process runtime; it falls back to the process start time if `/proc/uptime` is unavailable. The client ticks it using the derived boot time, so on a long-lived host the value will already be large at startup.
 - Lint/vet/build: `gofmt -l .` (should print nothing), `go vet ./...`, `go build ./...`.
 - The ASCII gopher in `main.go` is a Go raw string literal, so it must not contain backtick characters.
