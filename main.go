@@ -99,8 +99,19 @@ func osUptime() time.Duration {
 
 func humanizeUptime(d time.Duration) string {
 	d = d.Round(time.Second)
-	days := d / (24 * time.Hour)
-	d -= days * 24 * time.Hour
+	// Months and years use simple approximations (30 and 365 days) since this is
+	// just a human-friendly uptime display.
+	const (
+		day   = 24 * time.Hour
+		month = 30 * day
+		year  = 365 * day
+	)
+	years := d / year
+	d -= years * year
+	months := d / month
+	d -= months * month
+	days := d / day
+	d -= days * day
 	hours := d / time.Hour
 	d -= hours * time.Hour
 	minutes := d / time.Minute
@@ -108,29 +119,33 @@ func humanizeUptime(d time.Duration) string {
 	seconds := d / time.Second
 
 	var b strings.Builder
+	if years > 0 {
+		writeUnit(&b, int(years), "Y")
+	}
+	if months > 0 {
+		writeUnit(&b, int(months), "M")
+	}
 	if days > 0 {
-		writeUnit(&b, int(days), "day")
+		writeUnit(&b, int(days), "D")
 	}
 	if hours > 0 {
-		writeUnit(&b, int(hours), "hour")
+		writeUnit(&b, int(hours), "h")
 	}
 	if minutes > 0 {
-		writeUnit(&b, int(minutes), "minute")
+		writeUnit(&b, int(minutes), "m")
 	}
-	writeUnit(&b, int(seconds), "second")
+	writeUnit(&b, int(seconds), "s")
 	return strings.TrimSpace(b.String())
 }
 
+// writeUnit appends a single-letter time unit such as "8h" to the builder,
+// space-separating it from any previous unit.
 func writeUnit(b *strings.Builder, value int, unit string) {
 	if b.Len() > 0 {
 		b.WriteString(" ")
 	}
 	b.WriteString(itoa(value))
-	b.WriteString(" ")
 	b.WriteString(unit)
-	if value != 1 {
-		b.WriteString("s")
-	}
 }
 
 func itoa(n int) string {

@@ -216,14 +216,19 @@
         return n < 10 ? "0" + n : "" + n;
       }
 
-      function unit(value, name) {
-        return value + " " + name + (value !== 1 ? "s" : "");
-      }
-
       function humanizeUptime(totalSeconds) {
         totalSeconds = Math.max(0, Math.floor(totalSeconds));
-        var days = Math.floor(totalSeconds / 86400);
-        totalSeconds -= days * 86400;
+        // Months/years use 30- and 365-day approximations to match the server.
+        var YEAR = 365 * 86400;
+        var MONTH = 30 * 86400;
+        var DAY = 86400;
+
+        var years = Math.floor(totalSeconds / YEAR);
+        totalSeconds -= years * YEAR;
+        var months = Math.floor(totalSeconds / MONTH);
+        totalSeconds -= months * MONTH;
+        var days = Math.floor(totalSeconds / DAY);
+        totalSeconds -= days * DAY;
         var hours = Math.floor(totalSeconds / 3600);
         totalSeconds -= hours * 3600;
         var minutes = Math.floor(totalSeconds / 60);
@@ -231,10 +236,12 @@
         var seconds = totalSeconds;
 
         var parts = [];
-        if (days > 0) parts.push(unit(days, "day"));
-        if (hours > 0) parts.push(unit(hours, "hour"));
-        if (minutes > 0) parts.push(unit(minutes, "minute"));
-        parts.push(unit(seconds, "second"));
+        if (years > 0) parts.push(years + "Y");
+        if (months > 0) parts.push(months + "M");
+        if (days > 0) parts.push(days + "D");
+        if (hours > 0) parts.push(hours + "h");
+        if (minutes > 0) parts.push(minutes + "m");
+        parts.push(seconds + "s");
         return parts.join(" ");
       }
 
