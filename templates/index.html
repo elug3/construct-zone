@@ -111,8 +111,19 @@
       border-radius: 50%;
       background: var(--accent);
     }
+    /* Badge label is swapped purely by the media query, so it always tracks the
+       layout automatically without depending on JavaScript. */
+    .view-badge .view-mode-mobile {
+      display: none;
+    }
     /* Mobile layout automatically applies on narrow viewports/devices. */
     @media (max-width: 600px) {
+      .view-badge .view-mode-desktop {
+        display: none;
+      }
+      .view-badge .view-mode-mobile {
+        display: inline;
+      }
       body {
         padding: 1rem;
         align-items: flex-start;
@@ -154,7 +165,7 @@
 </head>
 <body>
   <main class="card">
-    <span class="view-badge" id="view-badge" aria-live="polite">Desktop view</span>
+    <span class="view-badge"><span class="view-mode-desktop">Desktop view</span><span class="view-mode-mobile">Mobile view</span></span>
     <span class="tag">Construct-Zone</span>
     <h1>We're Building Something Great</h1>
     <pre class="gopher" aria-label="Go gopher mascot">{{ .Gopher }}</pre>
@@ -243,41 +254,6 @@
 
       tick();
       setInterval(tick, 1000);
-    })();
-  </script>
-
-  <script>
-    (function () {
-      // Automatically detect mobile vs desktop based on the viewport, using the
-      // same 600px breakpoint as the CSS media query, and keep the badge in sync.
-      var badge = document.getElementById("view-badge");
-      var mql = window.matchMedia("(max-width: 600px)");
-
-      function applyViewMode(isMobile) {
-        if (badge) {
-          badge.textContent = isMobile ? "Mobile view" : "Desktop view";
-        }
-        document.body.setAttribute("data-view", isMobile ? "mobile" : "desktop");
-      }
-
-      applyViewMode(mql.matches);
-
-      if (typeof mql.addEventListener === "function") {
-        mql.addEventListener("change", function (e) {
-          applyViewMode(e.matches);
-        });
-      } else if (typeof mql.addListener === "function") {
-        // Fallback for older browsers.
-        mql.addListener(function (e) {
-          applyViewMode(e.matches);
-        });
-      }
-
-      // Also react to resize directly so the badge always reflects the current
-      // width, even in environments where the matchMedia change event is flaky.
-      window.addEventListener("resize", function () {
-        applyViewMode(mql.matches);
-      });
     })();
   </script>
 </body>
