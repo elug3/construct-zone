@@ -41,6 +41,16 @@ type pageData struct {
 	Uptime       string
 	CurrentTime  string
 	GoVersion    string
+	GitHubURL    string
+}
+
+const defaultGitHubURL = "https://github.com/elug3/construct-zone"
+
+func githubURL() string {
+	if u := os.Getenv("GITHUB_URL"); u != "" {
+		return u
+	}
+	return defaultGitHubURL
 }
 
 var (
@@ -114,6 +124,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		Uptime:       humanizeUptime(time.Since(startTime)),
 		CurrentTime:  time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 MST"),
 		GoVersion:    "Go " + strings.TrimPrefix(runtime.Version(), "go"),
+		GitHubURL:    githubURL(),
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
