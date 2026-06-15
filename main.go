@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -77,6 +78,24 @@ var (
 	visitorCount uint64
 	tmpl         = template.Must(template.ParseFS(templatesFS, "templates/index.html"))
 )
+
+// osUptime returns the system uptime since boot by reading /proc/uptime (Linux).
+// It falls back to the process uptime if the OS value can't be read.
+func osUptime() time.Duration {
+	data, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return time.Since(startTime)
+	}
+	fields := strings.Fields(string(data))
+	if len(fields) == 0 {
+		return time.Since(startTime)
+	}
+	secs, err := strconv.ParseFloat(fields[0], 64)
+	if err != nil {
+		return time.Since(startTime)
+	}
+	return time.Duration(secs * float64(time.Second))
+}
 
 func humanizeUptime(d time.Duration) string {
 	d = d.Round(time.Second)
@@ -158,16 +177,19 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
+	uptime := osUptime()
+	// Boot time so the client can keep ticking the OS uptime each second.
+	bootUnix := now.Add(-uptime).Unix()
 	data := pageData{
 		Description:   description,
 		Gopher:        gopherASCII,
 		VisitorCount:  count,
 		Address:       r.Host,
-		Uptime:        humanizeUptime(now.Sub(startTime)),
+		Uptime:        humanizeUptime(uptime),
 		CurrentTime:   now.UTC().Format("Mon, 02 Jan 2006 15:04:05 MST"),
 		GoVersion:     "Go " + strings.TrimPrefix(runtime.Version(), "go"),
 		GitHubURL:     githubURL(),
-		StartUnix:     startTime.Unix(),
+		StartUnix:     bootUnix,
 		ServerNowUnix: now.Unix(),
 	}
 
