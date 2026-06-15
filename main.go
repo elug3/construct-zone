@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"embed"
+	"encoding/hex"
 	"html/template"
 	"log"
 	"net/http"
@@ -16,6 +18,19 @@ import (
 var templatesFS embed.FS
 
 const description = "This site is under construction. The gophers are hard at work building something great. Please check back soon!"
+
+// sessionCookieName identifies a returning visitor so reloads aren't counted
+// as new visits.
+const sessionCookieName = "cz_session"
+
+// newSessionToken returns a random hex token for a visitor's session cookie.
+func newSessionToken() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
 
 // gopherASCII is a small ASCII rendering of the Go gopher mascot.
 // NOTE: keep this free of backtick characters so the raw string literal stays valid.
@@ -118,7 +133,29 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count := atomic.AddUint64(&visitorCount, 1)
+	// Count a visit only when there's no existing session cookie, so reloads by
+	// the same visitor don't inflate the count. New visitors get a session
+	// cookie and bump the unique-visitor total.
+	var count uint64
+	if _, err := r.Cookie(sessionCookieName); err != nil {
+		token, terr := newSessionToken()
+		if terr != nil {
+			log.Printf("failed to generate session token: %v", terr)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		http.SetCookie(w, &http.Cookie{
+			Name:     sessionCookieName,
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   60 * 60 * 24 * 365,
+		})
+		count = atomic.AddUint64(&visitorCount, 1)
+	} else {
+		count = atomic.LoadUint64(&visitorCount)
+	}
 
 	now := time.Now()
 	data := pageData{
